@@ -9,10 +9,15 @@ namespace AStar {
 
     public partial class PathfinderManager : MonoBehaviour {
 
-        //Starts the pathfinding process
-        public void FindPath(Vector3 pathStart, Vector3 pathEnd, Action<List<Node>, Vector3[], bool> callback, PathType pathType) {
-            List<Node> nodeWaypoints = new List<Node>();
-            Vector3[] waypoints = new Vector3[0];                       //All waypoints
+
+		///<summary>Main method for starting the pathfinding process.</summary>
+		///<param name="pathStart">Starting coords</param>
+		///<param name="pathEnd">Ending coords</param>
+		///<param name="callback">Callback delegate</param>
+		///<param name="pathType">Type of path</param>
+		public void FindPath(Vector3 pathStart, Vector3 pathEnd, Action<List<Node>, Vector3[], bool> callback, PathType pathType) {
+            List<Node> nodeWaypoints = new List<Node>();                //All waypoints as Node
+			Vector3[] waypoints = new Vector3[0];                       //All waypoints as Vector3
             bool pathSuccess = false;                                   //By default the pathSuccess will be false
 
             Node startNode = Grid.main.NodeFromWorldPoint(pathStart);   //The starting node
@@ -53,45 +58,27 @@ namespace AStar {
                                 waypointNodes2.Add(node);
                             }
                         }
-
-
-
+						
                         Node startWaypointNode = waypointNodes2[waypointNodes2.Count-1];
                         Node endWaypointNode = waypointNodes2[0];
-
-                        //Normal PointToPoint
-                        //if(CreatePath(startWaypointNode, endWaypointNode)) {
-                        //	List<Node> waypointNodes3 = RetracePath2(startWaypointNode, endWaypointNode);
-                        //	List<Node> waypointSimpilifyed = SimplifyPath2(waypointNodes3);
-                        //	waypoints = ExtractPath(waypointSimpilifyed);
-                        //}
-
+						
                         //AllPoints
                         if(CreatePath(startWaypointNode, endWaypointNode)) {
                             List<Node> waypointNodes3 = RetracePath(startWaypointNode, endWaypointNode);
                             waypoints = ExtractPath(waypointNodes3);
                         }
-
-                        //waypoints = ExtractPath(waypointNodes2);
-
                     }
                     //If the last node is walkable (Special feature not applyed)
                     else {
-                        UnityEngine.Debug.Log("Last node is walkable");
-
-                        //Normal PointToPoint
-                        if(CreatePath(startNode, endNode)) {
+						//Normal PointToPoint
+						if(CreatePath(startNode, endNode)) {
                             List<Node> waypointNodes2 = RetracePath(startNode, endNode);
                             List<Node> waypointSimpilifyed = SimplifyPath(waypointNodes2);
                             waypoints = ExtractPath(waypointSimpilifyed);
                         }
                     }
 
-
-
-
-
-
+					
                     //Node: WAYPOINTS IS BACKWARDS RIGHT NOW
                     for(int i = 0; i < waypointNodes.Count; i++) {
                         Node currentNode = waypointNodes[i];
@@ -99,9 +86,7 @@ namespace AStar {
                         if(!currentNode.isWalkable && i == 0) {
                             //UnityEngine.Debug.Log("Last node is unwalkable");
                         }
-
                     }
-
                 }
             }
 
@@ -115,9 +100,12 @@ namespace AStar {
             //Method message
             OnFinishedProcessingPath(new PathResult(nodeWaypoints, waypoints, pathSuccess, callback));   //Method on other page
         }
-        
-        //Pathfinding Math
-        public bool CreatePath(Node startNode, Node targetNode, bool ignoreIsWalkable = false) {
+
+		///<summary>Tests the pathfinding path using the A* algorithm and returns true if the path is possible. Adds each node as a parent to the following node for high performance when retracing the path.</summary>
+		///<param name="startNode">Starting node</param>
+		///<param name="endNode">Ending node</param>
+		///<param name="ignoreIsWalkable">Ending node</param>
+		public bool CreatePath(Node startNode, Node endNode, bool ignoreIsWalkable = false) {
             Heap<Node> openSet = new Heap<Node>(Grid.main.maxSize);     //The Nodes to check
             HashSet<Node> closedSet = new HashSet<Node>();              //The Nodes already checked
 
@@ -129,7 +117,7 @@ namespace AStar {
                 closedSet.Add(currentNode);
 
                 //We have found the final path (End of path)
-                if(currentNode == targetNode) {
+                if(currentNode == endNode) {
                     return true;
                 }
 
@@ -147,7 +135,7 @@ namespace AStar {
 
                     if(newMovementCostToNeighbor < neighbor.gCost || !openSet.Contains(neighbor)) {
                         neighbor.gCost = newMovementCostToNeighbor;
-                        neighbor.hCost = GetDistance(neighbor, targetNode);
+                        neighbor.hCost = GetDistance(neighbor, endNode);
                         neighbor.parent = currentNode;
 
                         //If openSet does not contain the current node then add it to the list
@@ -162,9 +150,11 @@ namespace AStar {
             return false;
         }
 
-        
 
-        public List<Node> RetracePath(Node startNode, Node endNode) {
+		///<summary>Retraces the path from the previous CreatePath() method. Gets the nodes parents from last node to start node. Returns all of the nodes as a list in backwards order.</summary>
+		///<param name="startNode">Starting node</param>
+		///<param name="endNode">Ending node</param>
+		public List<Node> RetracePath(Node startNode, Node endNode) {
             //Note: We dont need all of the waypoints because we will be useing the Node's "parent" variable
 
             List<Node> waypointNodes = new List<Node>();    //Store the waypoint nodes
@@ -188,8 +178,10 @@ namespace AStar {
             return waypointNodes;
             //Node: THE WAYPOINTS ARE BACKWARDS
         }
-        
-        public List<Node> SimplifyPath(List<Node> oldWaypoints) {
+
+		///<summary>Takes all of the waypoints and removes the unneeded ones from the list and returns the new list. Only keeps the points at which you start, turn and end at.</summary>
+		///<param name="oldWaypoints">Waypoints to simplify</param>
+		public List<Node> SimplifyPath(List<Node> oldWaypoints) {
             //Node: THE WAYPOINTS ARE BACKWARDS
 
             List<Node> waypoints = new List<Node>();
@@ -213,9 +205,10 @@ namespace AStar {
             return waypoints;
             //Node: THE WAYPOINTS ARE BACKWARDS
         }
-        
-        //Extracts the vector3's out of the node list and reverses all of the waypoints
-        public Vector3[] ExtractPath(List<Node> waypointNodes) {
+		
+		///<summary>Extracts the vector3's out of the node list and reverses all of the waypoints.</summary>
+		///<param name="oldWaypoints">Waypoints to extract</param>
+		public Vector3[] ExtractPath(List<Node> waypointNodes) {
             //Store the waypoint's position
             Vector3[] waypoints = new Vector3[waypointNodes.Count];
 
@@ -229,11 +222,10 @@ namespace AStar {
 
             return waypoints;
         }
+		
 
-
-
-        //Returns the disatance between two nodes
-        public int GetDistance(Node nodeA, Node nodeB) {
+		///<summary>Returns the disatance between the two nodes.</summary>
+		public int GetDistance(Node nodeA, Node nodeB) {
             int distanceX = Mathf.Abs(nodeA.gridX - nodeB.gridX);
             int distanceY = Mathf.Abs(nodeA.gridY - nodeB.gridY);
 

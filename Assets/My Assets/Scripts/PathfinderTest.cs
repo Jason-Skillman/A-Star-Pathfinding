@@ -6,21 +6,32 @@ using AStar;
 [RequireComponent(typeof(Pathfinder))]
 public class PathfinderTest : MonoBehaviour{
 
-	Pathfinder pathfinder;
 	public GameObject target;
+	public Vector3 coordsToTravelTo;
 	
-	private Pathfinder.Callback CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd;
+	private Pathfinder pathfinder;
+	//private Pathfinder.Callback CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd;
 
 	public void Start() {
 		pathfinder = this.GetComponent<Pathfinder>();
+		coordsToTravelTo = target.transform.position;
 
-		pathfinder.TravelToPath(target.transform.position, Test, Test, Test, Test);
+		//pathfinder.TravelToPath(coordsToTravelTo, CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd);
+		pathfinder.TravelToPath(target, CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd);
 	}
+	
 
-	public void Update() {
-		
+	public void CallbackStart() {
+		Debug.Log("CallbackStart()");
 	}
-
-	public void Test() { }
+	public void CallbackUpdate() {
+		Debug.Log("CallbackUpdate()");
+	}
+	public void CallbackUpdateTarget() {
+		Debug.Log("CallbackUpdateTarget()");
+	}
+	public void CallbackEnd() {
+		Debug.Log("CallbackEnd()");
+	}
 
 }

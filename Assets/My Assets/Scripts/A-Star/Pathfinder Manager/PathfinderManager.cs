@@ -12,13 +12,14 @@ namespace AStar {
         public static PathfinderManager main = new PathfinderManager();
 
         private Queue<PathResult> results = new Queue<PathResult>();
-        //private Queue<PathRequest> pathRequestQueue = new Queue<PathRequest>();
-        //private PathRequest currentPathRequest;
-        //private bool isProcessingPath;
 
 
         public void Awake() {
-            if(main == null) main = this;
+			if(main == null) {
+				main = this;
+			} else {
+				Destroy(this);
+			}
         }
 
         public void Update() {
@@ -31,38 +32,30 @@ namespace AStar {
                     }
                 }
             }
-        }
-
-        //##### Main path request method #####
-        public void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<List<Node>, Vector3[], bool> callback, PathType pathType) {
+		}
+		
+		///<summary>Main path request method for pathfinding.</summary>
+		///<param name="pathStart">Starting coords</param>
+		///<param name="pathEnd">Ending coords</param>
+		///<param name="callback">Callback delegate</param>
+		///<param name="pathType">Type of path</param>
+		//<returns>Returns an integer based on the passed value.</returns>
+		public void RequestPath(Vector3 pathStart, Vector3 pathEnd, Action<List<Node>, Vector3[], bool> callback, PathType pathType) {
             ThreadStart threadStart = delegate {
                 FindPath(pathStart, pathEnd, callback, pathType);   //Method on other page
             };
             threadStart.Invoke();
         }
-
-        //Called on the other page when the process finished
-        public void OnFinishedProcessingPath(PathResult result) {
+		
+		///<summary>Method called when the pathfinding process has finished.</summary>
+		public void OnFinishedProcessingPath(PathResult result) {
             lock(results) {
                 results.Enqueue(result);
             }
         }
         
     }
-
-    [Obsolete("Dont use anymore")]
-    public struct PathRequest {
-        public Vector3 pathStart;
-        public Vector3 pathEnd;
-        public Action<Vector3[], bool> callback;
-
-        public PathRequest(Vector3 pathStart, Vector3 pathEnd, Action<Vector3[], bool> callback) {
-            this.pathStart = pathStart;
-            this.pathEnd = pathEnd;
-            this.callback = callback;
-        }
-    }
-    
+	
     public struct PathResult {
         public List<Node> nodeWaypoints;
         public Vector3[] path;

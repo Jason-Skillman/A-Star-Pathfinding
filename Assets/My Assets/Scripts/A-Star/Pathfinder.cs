@@ -7,20 +7,21 @@ namespace AStar {
 
 	[RequireComponent(typeof(CharacterController))]
 	public class Pathfinder : MonoBehaviour {
-        
-		public Vector3 targetPosition;                                          //The position to travel to as a Vector3
-		public int currentWaypoint = 0;                                         //The waypoint we are currently moving towards. Resets every time path is updated.
 
-		public float speed = 10;												//Movement speed
-		public float nextWaypointDistance = 1.2f;                               //Minimum distance you need to be to the current waypoint to go onto the next waypoint
+		private GameObject targetGameObject;
+		public Vector3 targetPosition;									//The position to travel to as a Vector3
+		public int currentWaypoint = 0;									//The waypoint we are currently moving towards. Resets every time path is updated.
 
-		public float turnSpeed = 20;											//Turning speed
+		public float speed = 10;										//Movement speed
+		public float nextWaypointDistance = 1.2f;						//Minimum distance you need to be to the current waypoint to go onto the next waypoint
+
+		public float turnSpeed = 20;									//Turning speed
 		[Obsolete()]
-		public float nextWaypointTurn = 5;										//Minimum distance to start turning towards next waypoint
+		public float nextWaypointTurn = 5;								//Minimum distance to start turning towards next waypoint
 
-		public float updatePathInterval = 0.5f;                                 //Time to wait until pathfinder will recalculate it's position
+		public float updatePathInterval = 0.5f;							//Time to wait until pathfinder will recalculate it's position
 
-		public bool isMoving = false;                                           //Is the object moving?
+		public bool isMoving = false;									//Is the object moving?
 
         
         public Path waypoints;
@@ -37,49 +38,69 @@ namespace AStar {
 		private Callback CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd;
 
 
-		public void Start() {
-			//Testing V V V
-			Node myNode = Grid.main.NodeFromWorldPoint(this.transform.position);
-			List<Node> myNeighbours = Grid.main.GetNeighbours(myNode);
 
-			foreach(Node node in myNeighbours) {
-				//node.color = Color.cyan;
-			}
-		}
-
-		public void Update() {
-			//Testing V V V
-			List<Node> allNeighbourNodes = Grid.main.GetNeighbourNodesAroundObject(this.gameObject);
-
-			foreach(Node node in allNeighbourNodes) {
-				//node.color = Color.blue;
-			}
-		}
-        
-
-		//##### MAIN METHOD TO CALL FOR PATHFINDING #####
+		[Obsolete]
+		///<summary>Main method for starting the Pathfinding process.</summary>
+		///<param name="targetPosition">Target coords</param>
+		///<param name="CallbackStart">Callback will be called when pathfinding starts its path</param>
+		///<param name="CallbackStart">Callback will be called every pathfinding update</param>
+		///<param name="CallbackStart">Callback will be called when the pathfinding recalculates targets coords based on the updatePathInterval</param>
+		///<param name="CallbackStart">Callback will be called when pathfinding finishes its path</param>
 		public void TravelToPath(Vector3 targetPosition, Callback CallbackStart, Callback CallbackUpdate, Callback CallbackUpdateTarget, Callback CallbackEnd) {
 			this.CallbackStart = CallbackStart;
 			this.CallbackUpdate = CallbackUpdate;
 			this.CallbackUpdateTarget = CallbackUpdateTarget;
 			this.CallbackEnd = CallbackEnd;
 
-			TravelToPath(targetPosition);
+			TravelToPath(targetPosition);	//Reuse the already existing method below
 		}
+		public void TravelToPath(GameObject targetGameObject, Callback CallbackStart, Callback CallbackUpdate, Callback CallbackUpdateTarget, Callback CallbackEnd) {
+			this.CallbackStart = CallbackStart;
+			this.CallbackUpdate = CallbackUpdate;
+			this.CallbackUpdateTarget = CallbackUpdateTarget;
+			this.CallbackEnd = CallbackEnd;
+
+			TravelToPath(targetGameObject);   //Reuse the already existing method below
+		}
+		[Obsolete]
+		///<summary>Main method for starting the Pathfinding process.</summary>
+		///<param name="targetPosition">Target coords</param>
 		public void TravelToPath(Vector3 targetPosition) {
-			//Debug.Log("TravelToPath");
 			this.targetPosition = targetPosition;
 			isMoving = true;
 
-			if(targetPosition == Vector3.zero || targetPosition == null) {
+			//Checks if the location is null
+			if(targetPosition != Vector3.zero && targetPosition != null) {
+				//If UpdatePath() is already running, stop it
+				if(coroutineUpdatePath != null) {
+					StopCoroutine(coroutineUpdatePath);
+				}
+				coroutineUpdatePath = StartCoroutine("UpdatePath");
+			} else {
+				//Dont start the pathfinding process
 				Debug.LogError("Cant travel to null location");
 			}
-
-			if(coroutineUpdatePath != null)
-				StopCoroutine(coroutineUpdatePath);
-			coroutineUpdatePath = StartCoroutine("UpdatePath");
 		}
-        
+		public void TravelToPath(GameObject targetGameObject) {
+			this.targetGameObject = targetGameObject;
+			isMoving = true;
+
+			//Checks if the location is null
+			if(targetGameObject != null) {
+				//If UpdatePath() is already running, stop it
+				if(coroutineUpdatePath != null) {
+					StopCoroutine(coroutineUpdatePath);
+				}
+				coroutineUpdatePath = StartCoroutine(UpdatePath(targetGameObject));
+			}
+			else {
+				//Dont start the pathfinding process
+				Debug.LogError("Cant travel to null location");
+			}
+		}
+
+		///<summary>Coroutine for updating the pathfinding path.</summary>
+		[Obsolete]
 		private IEnumerator UpdatePath() {
 			//Fixes/Solves large delta time errors
 			if(Time.timeSinceLevelLoad < 0.3f) {
@@ -87,33 +108,16 @@ namespace AStar {
 			}
 
 			CallbackStart(); //Call the callback delagate
-
+			
 			Vector3 targetPositionOld = targetPosition;
 
 			PathfinderManager.main.RequestPath(this.transform.position, targetPosition, OnPathCalculation, PathType.AllPoints);
 
-            do { //Start of loop
+			do { //Start of inf. loop
 				yield return null;
 				
-				//PathfinderManager.main.RequestPath(this.transform.position, targetPosition, OnPathCalculation, PathType.AllPoints);
-                for(int i = 0; i < allNodes.Count; i++) {
-                    if(i > currentWaypoint && i <= currentWaypoint+3) {
-                        //Debug.Log(allNodes[i].gridPosition);
-                        if(allNodes[i].gridPosition == new Vector2(57, 35)) {
-                            //Debug.Log("YAAAAAAAAA");
-                            StopMoving();
-                        }
-                    }
-                }
-                for(int i = 0; i < 3; i++) {
-                    if(i > currentWaypoint) {
-
-                    }
-                }
-
-                //targetPositionOld = targetPosition;
-				//currentWaypoint = 0;
-
+				PathfinderManager.main.RequestPath(this.transform.position, targetPosition, OnPathCalculation, PathType.AllPoints);
+				
 				CallbackUpdateTarget(); //Call the callback delagate
 
 				if(updatePathInterval > 0) {
@@ -123,9 +127,35 @@ namespace AStar {
 				}
 			} while(true);
 		}
-        
-        //Called when the path has been caculated
-        private void OnPathCalculation(List<Node> nodeWaypoints, Vector3[] waypoints, bool pathSuccessful) {
+		private IEnumerator UpdatePath(GameObject targetGameObject) {
+			//Fixes/Solves large delta time errors
+			if(Time.timeSinceLevelLoad < 0.3f) {
+				yield return new WaitForSeconds(0.3f);
+			}
+
+			CallbackStart(); //Call the callback delagate
+			
+			PathfinderManager.main.RequestPath(this.transform.position, targetGameObject.transform.position, OnPathCalculation, PathType.AllPoints);
+
+			do { //Start of inf. loop
+				yield return null;
+
+				Debug.Log(targetGameObject.transform.position);
+				PathfinderManager.main.RequestPath(this.transform.position, targetGameObject.transform.position, OnPathCalculation, PathType.AllPoints);
+
+				CallbackUpdateTarget(); //Call the callback delagate
+
+				if(updatePathInterval > 0) {
+					yield return new WaitForSeconds(updatePathInterval);
+				}
+				else {
+					yield return new WaitForSeconds(Mathf.Infinity);
+				}
+			} while(true);
+		}
+
+		//Called when the path has been caculated
+		private void OnPathCalculation(List<Node> nodeWaypoints, Vector3[] waypoints, bool pathSuccessful) {
 			if(pathSuccessful) {
 
                 foreach(Node node in nodeWaypoints) {
