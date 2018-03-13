@@ -33,19 +33,7 @@ namespace AStar {
 			set;
 		}
 
-
-		/*
-		public Node(Vector3 worldPosition, bool isWalkable, int gridX, int gridY, int movementPenalty, Color color, GameObject gameObject) {
-			this.isWalkable = isWalkable;
-			this.worldPosition = worldPosition;
-			this.gridX = gridX;
-			this.gridY = gridY;
-			this.movementPenalty = movementPenalty;
-			this.color = color;
-			this.gameObject = gameObject;
-			this.nodeType = nodeType;
-		}
-		*/
+		
 		public Node(Vector3 worldPosition, Vector2 gridPosition, bool isWalkable, int movementPenalty, Color color, GameObject gameObject, NodeType nodeType) {
 			this.worldPosition = worldPosition;
 			this.gridPosition = gridPosition;

@@ -40,13 +40,6 @@ namespace AStar {
             };
             threadStart.Invoke();
         }
-        [Obsolete("Use RequestPath() instead.")]
-        public void RequestPathOld(PathRequest request) {
-            ThreadStart threadStart = delegate {
-                //FindPathOld(request);   //Method on other page
-            };
-            threadStart.Invoke();
-        }
 
         //Called on the other page when the process finished
         public void OnFinishedProcessingPath(PathResult result) {
