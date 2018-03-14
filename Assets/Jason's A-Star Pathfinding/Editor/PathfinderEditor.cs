@@ -34,7 +34,7 @@ public class PathfinderEditor : Editor {
 		if(!myTarget.updatePath) {
 			GUI.enabled = false;
 		}
-		myTarget.pathUpdateInterval = EditorGUILayout.Slider(new GUIContent("Path Update Interval", "Time to wait until pathfinder will recalculate it's position"), myTarget.pathUpdateInterval, 0.1f, Mathf.Infinity);
+		myTarget.pathUpdateInterval = EditorGUILayout.Slider(new GUIContent("Path Update Interval", "Time to wait until pathfinder will recalculate it's position"), myTarget.pathUpdateInterval, 0.1f, 60.0f);
 
 		GUI.enabled = true;
 		GUILayout.Space(10);
@@ -43,8 +43,7 @@ public class PathfinderEditor : Editor {
 
 		EditorGUILayout.LabelField(new GUIContent("Current Waypoint: " + myTarget.currentWaypoint, "The waypoint we are currently moving towards. Resets every time path is updated."));
 		EditorGUILayout.LabelField(new GUIContent("Is Moving: " + myTarget.isMoving, "Is the object moving?"));
-		//EditorGUILayout.LabelField(new GUIContent("Current Waypoint: " + myTarget.currentWaypoint, "The waypoint we are currently moving towards. Resets every time path is updated."));
-
+		
 		GUILayout.Space(20);
 
 		if(GUI.changed) {
