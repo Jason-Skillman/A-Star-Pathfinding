@@ -30,57 +30,60 @@ namespace AStar {
         public List<Node> allNodes;
         public Vector3[] vectorWaypoint;
 		
-
 		
 		private Coroutine coroutineUpdatePath;
 		private Coroutine coroutineFollowPath;
 		public delegate void Callback();
-		private Callback CallbackStart, CallbackUpdate, CallbackUpdateTarget, CallbackEnd;
+		private Callback CallbackStart, CallbackUpdateTarget, CallbackEnd;
 
 
 
-		[Obsolete]
-		///<summary>Main method for starting the Pathfinding process.</summary>
+		///<summary>Main method for starting the Pathfinding process. Uses a Vector3 as coords. Does not support moving targets.</summary>
 		///<param name="targetPosition">Target coords</param>
 		///<param name="CallbackStart">Callback will be called when pathfinding starts its path</param>
 		///<param name="CallbackStart">Callback will be called every pathfinding update</param>
 		///<param name="CallbackStart">Callback will be called when the pathfinding recalculates targets coords based on the updatePathInterval</param>
 		///<param name="CallbackStart">Callback will be called when pathfinding finishes its path</param>
-		public void TravelToPath(Vector3 targetPosition, Callback CallbackStart, Callback CallbackUpdate, Callback CallbackUpdateTarget, Callback CallbackEnd) {
+		public void TravelToPath(Vector3 targetPosition, Callback CallbackStart,Callback CallbackUpdateTarget, Callback CallbackEnd) {
 			this.CallbackStart = CallbackStart;
-			this.CallbackUpdate = CallbackUpdate;
 			this.CallbackUpdateTarget = CallbackUpdateTarget;
 			this.CallbackEnd = CallbackEnd;
 
 			TravelToPath(targetPosition);	//Reuse the already existing method below
 		}
-		public void TravelToPath(GameObject targetGameObject, Callback CallbackStart, Callback CallbackUpdate, Callback CallbackUpdateTarget, Callback CallbackEnd) {
+		///<summary>Main method for starting the Pathfinding process. Uses a GameObject as coords. Does support moving targets.</summary>
+		///<param name="targetPosition">Target coords</param>
+		///<param name="CallbackStart">Callback will be called when pathfinding starts its path</param>
+		///<param name="CallbackStart">Callback will be called every pathfinding update</param>
+		///<param name="CallbackStart">Callback will be called when the pathfinding recalculates targets coords based on the updatePathInterval</param>
+		///<param name="CallbackStart">Callback will be called when pathfinding finishes its path</param>
+		public void TravelToPath(GameObject targetGameObject, Callback CallbackStart, Callback CallbackUpdateTarget, Callback CallbackEnd) {
 			this.CallbackStart = CallbackStart;
-			this.CallbackUpdate = CallbackUpdate;
 			this.CallbackUpdateTarget = CallbackUpdateTarget;
 			this.CallbackEnd = CallbackEnd;
 
 			TravelToPath(targetGameObject);   //Reuse the already existing method below
 		}
-		[Obsolete]
-		///<summary>Main method for starting the Pathfinding process.</summary>
-		///<param name="targetPosition">Target coords</param>
+		///<summary>Main method for starting the Pathfinding process. Uses a Vector3 as coords. Does not support moving targets.</summary>
+		///<param name="targetPosition">Target coords as Vector3</param>
 		public void TravelToPath(Vector3 targetPosition) {
 			this.targetPosition = targetPosition;
 			isMoving = true;
 
 			//Checks if the location is null
-			if(targetPosition != Vector3.zero && targetPosition != null) {
+			if(targetPosition != null && targetPosition != Vector3.zero) {
 				//If UpdatePath() is already running, stop it
 				if(coroutineUpdatePath != null) {
 					StopCoroutine(coroutineUpdatePath);
 				}
-				coroutineUpdatePath = StartCoroutine("UpdatePath");
+				coroutineUpdatePath = StartCoroutine(UpdatePath());
 			} else {
 				//Dont start the pathfinding process
 				Debug.LogError("Cant travel to null location");
 			}
 		}
+		///<summary>Main method for starting the Pathfinding process. Uses a GameObject as coords. Does support moving targets.</summary>
+		///<param name="targetGameObject">Target coords as GameObject</param>
 		public void TravelToPath(GameObject targetGameObject) {
 			this.targetGameObject = targetGameObject;
 			isMoving = true;
@@ -91,6 +94,7 @@ namespace AStar {
 				if(coroutineUpdatePath != null) {
 					StopCoroutine(coroutineUpdatePath);
 				}
+				//Start updating the path
 				coroutineUpdatePath = StartCoroutine(UpdatePath(targetGameObject));
 			}
 			else {
@@ -99,8 +103,18 @@ namespace AStar {
 			}
 		}
 
-		///<summary>Coroutine for updating the pathfinding path.</summary>
-		[Obsolete]
+
+		///<summary>Main method to call to stop the pathfinding proccess.</summary>
+		public void StopMoving() {
+			isMoving = false;
+			if(coroutineUpdatePath != null)
+				StopCoroutine(coroutineUpdatePath);
+			if(coroutineFollowPath != null)
+				StopCoroutine(coroutineFollowPath);
+		}
+
+
+		///<summary>Coroutine for updating the pathfinding path. Does not support moving targets.</summary>
 		private IEnumerator UpdatePath() {
 			//Fixes/Solves large delta time errors
 			if(Time.timeSinceLevelLoad < 0.3f) {
@@ -109,10 +123,6 @@ namespace AStar {
 
 			CallbackStart(); //Call the callback delagate
 			
-			Vector3 targetPositionOld = targetPosition;
-
-			PathfinderManager.main.RequestPath(this.transform.position, targetPosition, OnPathCalculation, PathType.AllPoints);
-
 			do { //Start of inf. loop
 				yield return null;
 				
@@ -127,6 +137,8 @@ namespace AStar {
 				}
 			} while(true);
 		}
+		///<summary>Coroutine for updating the pathfinding path. Does support moving targets.</summary>
+		///<param name="targetGameObject">Target coords as GameObject</param>
 		private IEnumerator UpdatePath(GameObject targetGameObject) {
 			//Fixes/Solves large delta time errors
 			if(Time.timeSinceLevelLoad < 0.3f) {
@@ -135,12 +147,9 @@ namespace AStar {
 
 			CallbackStart(); //Call the callback delagate
 			
-			PathfinderManager.main.RequestPath(this.transform.position, targetGameObject.transform.position, OnPathCalculation, PathType.AllPoints);
-
 			do { //Start of inf. loop
 				yield return null;
-
-				Debug.Log(targetGameObject.transform.position);
+				
 				PathfinderManager.main.RequestPath(this.transform.position, targetGameObject.transform.position, OnPathCalculation, PathType.AllPoints);
 
 				CallbackUpdateTarget(); //Call the callback delagate
@@ -154,37 +163,42 @@ namespace AStar {
 			} while(true);
 		}
 
-		//Called when the path has been caculated
+
+		///<summary>Called when the pathfinding process has finished its calculation.</summary>
+		///<param name="nodeWaypoints">All of the nodes as a List in the path</param>
+		///<param name="waypoints">All of the coords in the path</param>
+		///<param name="pathSuccessful">Was the pathfinding successful?</param>
 		private void OnPathCalculation(List<Node> nodeWaypoints, Vector3[] waypoints, bool pathSuccessful) {
+			//Was the path a success?
 			if(pathSuccessful) {
-
-                foreach(Node node in nodeWaypoints) {
-                    node.color = Color.blue;
-                }
-
-
+				//Path was a success, start moving
+				
                 allNodes = nodeWaypoints;
-                this.waypoints = new Path(waypoints, this.transform.position, nextWaypointTurn);
                 vectorWaypoint = waypoints;
 
+				this.waypoints = new Path(waypoints, this.transform.position, nextWaypointTurn);
 
-
-                if(coroutineFollowPath != null)
+				//If FollowPath() is already running, stop it
+				if(coroutineFollowPath != null) {
 					StopCoroutine(coroutineFollowPath);
-				coroutineFollowPath = StartCoroutine("FollowPath");
+				}
+				//Start following the path
+				coroutineFollowPath = StartCoroutine(FollowPath());
 			} else {
-				Debug.LogError("Path failed");
+				//Path failed. No possible path to target
+				Debug.Log("Path failed. No possible path to target");
 				StopMoving();
 			}
 		}
 
-        private void OnPathCalculation(List<Node> allNodes, bool pathSuccessful) {
-            if(pathSuccessful) {
-                nodePath = new NodePath(allNodes);
-            }
-        }
-        
-		//Moves the object along the path
+		///<summary>Called when this object has reached the end of it's destanation.</summary>
+		private void OnReachedEndOfPath() {
+			//Debug.Log(this.name + " has reached it's destination.");
+			StopMoving();
+		}
+
+
+		///<summary>Coroutine for moving this pathfinder along the path.</summary>
 		private IEnumerator FollowPath() {
 			Vector3 direction = new Vector3();
 			Vector2 position2D;
@@ -193,8 +207,6 @@ namespace AStar {
 				yield return null;
 
 				position2D = new Vector2(this.transform.position.x, this.transform.position.z);
-
-				CallbackUpdate();   //Call the callback delagate
 				
 				if(currentWaypoint < waypoints.waypoints.Length) {	//If their is a waypoint to move towards
 					//Direction and speed to the next waypoint
@@ -205,9 +217,9 @@ namespace AStar {
 					RotateTowards(direction);
 
 					//Move the object
-					//this.transform.Translate(direction * Time.deltaTime, Space.World);
-					this.GetComponent<CharacterController>().SimpleMove(direction);
-					//this.GetComponent<Rigidbody>().MovePosition(direction);
+					//this.transform.Translate(direction * Time.deltaTime, Space.World);	//Trandsform movement
+					this.GetComponent<CharacterController>().SimpleMove(direction);			//CharacterController Movement
+					//this.GetComponent<Rigidbody>().MovePosition(direction);				//Rigidbody movement
 
 					//If we are near the next waypoint. Based on "nextWaypointDistance" variable
 					if((transform.position - waypoints.waypoints[currentWaypoint]).sqrMagnitude < nextWaypointDistance * nextWaypointDistance) {
@@ -223,20 +235,9 @@ namespace AStar {
 			}
 		}
 
-		private void OnReachedEndOfPath() {
-			StopMoving();
-		}
-
-
-		//##### MAIN METHOD TO CALL TO STOP PATHFINDING #####
-		public void StopMoving() {
-			isMoving = false;
-			if(coroutineUpdatePath != null)
-				StopCoroutine(coroutineUpdatePath);
-			if(coroutineFollowPath != null)
-				StopCoroutine(coroutineFollowPath);
-		}
 		
+
+		///<summary>Coroutine for moving this pathfinder along the path.</summary>
 		public void RotateTowards(Vector3 dir) {
 			if(dir != Vector3.zero) {
 				Quaternion rot = transform.rotation;
@@ -264,13 +265,15 @@ namespace AStar {
                     Gizmos.DrawSphere(point + Vector3.up, 0.5f);
                 }
 
-                //Look ahead
+				/*
+                //Look ahead (future points)
                 Gizmos.color = Color.blue;
                 for(int i = 0; i < vectorWaypoint.Length; i++) {
                     if(i > currentWaypoint && i <= currentWaypoint+3) {
-                        Gizmos.DrawSphere(vectorWaypoint[i] + Vector3.up*2, 0.5f);
+                        Gizmos.DrawSphere(vectorWaypoint[i] + Vector3.up * 2, 0.5f);
                     }
                 }
+				*/
 
                 //Draw Line
                 Gizmos.color = Color.green;
