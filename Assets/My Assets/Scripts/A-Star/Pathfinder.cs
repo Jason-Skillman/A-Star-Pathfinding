@@ -8,28 +8,29 @@ namespace AStar {
 	[RequireComponent(typeof(CharacterController))]
 	public class Pathfinder : MonoBehaviour {
 
-		private GameObject targetGameObject;
-		public Vector3 targetPosition;									//The position to travel to as a Vector3
-		public int currentWaypoint = 0;									//The waypoint we are currently moving towards. Resets every time path is updated.
+		public GameObject targetGameObject;						//The position to travel to as a GameObject
+		public Vector3 targetPosition;							//The position to travel to as a Vector3
+		
+		public float speed = 10;								//Movement speed
+		public float nextWaypointDistance = 1.0f;				//Minimum distance you need to be to the current waypoint to go onto the next waypoint
 
-		public float speed = 10;										//Movement speed
-		public float nextWaypointDistance = 1.2f;						//Minimum distance you need to be to the current waypoint to go onto the next waypoint
+		public float turnSpeed = 20;							//Turning speed
+		[Obsolete]
+		public float nextWaypointTurn = 5;                      //Minimum distance to start turning towards next waypoint
 
-		public float turnSpeed = 20;									//Turning speed
-		[Obsolete()]
-		public float nextWaypointTurn = 5;								//Minimum distance to start turning towards next waypoint
+		public bool updatePath = true;							
+		public float pathUpdateInterval = 0.5f;				    //Time to wait until pathfinder will recalculate it's position
+		
 
-		public float updatePathInterval = 0.5f;							//Time to wait until pathfinder will recalculate it's position
-
-		public bool isMoving = false;									//Is the object moving?
+		//Read only
+		public int currentWaypoint = 0;						    //The waypoint we are currently moving towards. Resets every time path is updated.
+		public bool isMoving = false;							//Is the object moving?
 
         
         public Path waypoints;
         public NodePath nodePath;
-
         public List<Node> allNodes;
         public Vector3[] vectorWaypoint;
-		
 		
 		private Coroutine coroutineUpdatePath;
 		private Coroutine coroutineFollowPath;
@@ -125,13 +126,15 @@ namespace AStar {
 			
 			do { //Start of inf. loop
 				yield return null;
-				
+
+				currentWaypoint = 1;
+
 				PathfinderManager.main.RequestPath(this.transform.position, targetPosition, OnPathCalculation, PathType.AllPoints);
 				
 				CallbackUpdateTarget(); //Call the callback delagate
 
-				if(updatePathInterval > 0) {
-					yield return new WaitForSeconds(updatePathInterval);
+				if(updatePath) {
+					yield return new WaitForSeconds(pathUpdateInterval);
 				} else {
 					yield return new WaitForSeconds(Mathf.Infinity);
 				}
@@ -149,15 +152,16 @@ namespace AStar {
 			
 			do { //Start of inf. loop
 				yield return null;
-				
+
+				currentWaypoint = 1;
+
 				PathfinderManager.main.RequestPath(this.transform.position, targetGameObject.transform.position, OnPathCalculation, PathType.AllPoints);
 
 				CallbackUpdateTarget(); //Call the callback delagate
-
-				if(updatePathInterval > 0) {
-					yield return new WaitForSeconds(updatePathInterval);
-				}
-				else {
+				
+				if(updatePath) {
+					yield return new WaitForSeconds(pathUpdateInterval);
+				} else {
 					yield return new WaitForSeconds(Mathf.Infinity);
 				}
 			} while(true);
@@ -218,16 +222,15 @@ namespace AStar {
 
 					//Move the object
 					//this.transform.Translate(direction * Time.deltaTime, Space.World);	//Trandsform movement
-					this.GetComponent<CharacterController>().SimpleMove(direction);			//CharacterController Movement
-					//this.GetComponent<Rigidbody>().MovePosition(direction);				//Rigidbody movement
-
+					this.GetComponent<CharacterController>().SimpleMove(direction);         //CharacterController Movement
+					
 					//If we are near the next waypoint. Based on "nextWaypointDistance" variable
 					if((transform.position - waypoints.waypoints[currentWaypoint]).sqrMagnitude < nextWaypointDistance * nextWaypointDistance) {
 						currentWaypoint++;
 					}
 				} else {    //If we are at the end of the waypoint list
 					//End of the path
-					currentWaypoint = 1;
+					currentWaypoint = 1;	
 
 					OnReachedEndOfPath();
 					CallbackEnd();   //Call the callback delagate

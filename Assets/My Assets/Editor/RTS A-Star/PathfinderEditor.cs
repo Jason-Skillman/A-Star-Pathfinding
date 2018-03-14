@@ -1,4 +1,4 @@
-/*using UnityEditor;
+using UnityEditor;
 using UnityEngine;
 using System.Collections;
 using AStar;
@@ -16,9 +16,8 @@ public class PathfinderEditor : Editor {
 		GUILayout.Space(5);
 
 
-
+		myTarget.targetGameObject = (GameObject)EditorGUILayout.ObjectField("Target GameObject", myTarget.targetGameObject, typeof(GameObject), true);
 		myTarget.targetPosition = EditorGUILayout.Vector3Field(new GUIContent("Target Position", "The position to travel to as a Vector3"), myTarget.targetPosition);
-		myTarget.currentWaypoint = EditorGUILayout.IntField(new GUIContent("Current Waypoint", "The waypoint we are currently moving towards. Resets every time path is updated."), myTarget.currentWaypoint);
 		GUILayout.Space(10);
 
 		myTarget.speed = EditorGUILayout.FloatField(new GUIContent("Movement Speed", "Movement speed"), myTarget.speed);
@@ -27,15 +26,22 @@ public class PathfinderEditor : Editor {
 
 		myTarget.turnSpeed = EditorGUILayout.FloatField(new GUIContent("Turning Speed", "Turning speed"), myTarget.turnSpeed);
 		GUI.enabled = false;
-		myTarget.nextWaypointTurn = EditorGUILayout.FloatField(new GUIContent("Next Turn Distance", "Minimum distance to start turning towards next waypoint"), myTarget.nextWaypointTurn);
+		myTarget.nextWaypointTurn = EditorGUILayout.FloatField(new GUIContent("Next Turn Distance", "[Depresiated] Minimum distance to start turning towards next waypoint"), myTarget.nextWaypointTurn);
 		GUI.enabled = true;
 		GUILayout.Space(10);
-		
-		myTarget.updatePathInterval = EditorGUILayout.FloatField(new GUIContent("Path Update Interval", "Time to wait until pathfinder will recalculate it's position"), myTarget.updatePathInterval);
+
+		myTarget.updatePath = EditorGUILayout.Toggle(new GUIContent("Update Path", "Do you want the path to be updated?"), myTarget.updatePath);
+		if(!myTarget.updatePath) {
+			GUI.enabled = false;
+		}
+		myTarget.pathUpdateInterval = EditorGUILayout.Slider(new GUIContent("Path Update Interval", "Time to wait until pathfinder will recalculate it's position"), myTarget.pathUpdateInterval, 0.1f, Mathf.Infinity);
+
+		GUI.enabled = true;
 		GUILayout.Space(10);
 
 
-		
+
+		EditorGUILayout.LabelField(new GUIContent("Current Waypoint: " + myTarget.currentWaypoint, "The waypoint we are currently moving towards. Resets every time path is updated."));
 		EditorGUILayout.LabelField(new GUIContent("Is Moving: " + myTarget.isMoving, "Is the object moving?"));
 		//EditorGUILayout.LabelField(new GUIContent("Current Waypoint: " + myTarget.currentWaypoint, "The waypoint we are currently moving towards. Resets every time path is updated."));
 
@@ -47,4 +53,3 @@ public class PathfinderEditor : Editor {
 	}
 
 }
-*/
